@@ -2,11 +2,30 @@
  * Copyright (c) 2020 The ZMK Contributors
  *
  * SPDX-License-Identifier: MIT
+ *
+ * Layout and behaviours ported from Toucan (config/toucan.keymap), minus the trackpad MOUSE layer.
  */
 
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/outputs.h>
+
+// Layer order matters: higher index wins. WIN/WNAV must sit below NAV/SYM/ADJ.
+#define BASE  0
+#define WIN   1
+#define NAV   2
+#define WNAV  3
+#define SYM   4
+#define ADJ   5
+
+// Key positions for chordal hold
+#define KEYS_L 0 1 2 3 4 5 12 13 14 15 16 17 24 25 26 27 28 29
+#define KEYS_R 6 7 8 9 10 11 18 19 20 21 22 23 30 31 32 33 34 35
+#define THUMBS 36 37 38 39 40 41
+
+// Encoder bindings (Corne hardware only; same on every layer)
+#define ENCODERS &inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN
 
 / {
         sensors {
@@ -25,60 +44,153 @@
 };
 
 / {
-        keymap {
-                compatible = "zmk,keymap";
-
-                default_layer {
-                                // -----------------------------------------------------------------------------------------
-                                // |  TAB |  Q  |  W  |  E  |  R  |  T  |   |  Y  |  U   |  I  |  O  |  P  | BKSP |
-                                // | CTRL |  A  |  S  |  D  |  F  |  G  |   |  H  |  J   |  K  |  L  |  ;  |  '   |
-                                // | SHFT |  Z  |  X  |  C  |  V  |  B  |   |  N  |  M   |  ,  |  .  |  /  | ESC  |
-                                //                    | GUI | LWR | SPC |   | ENT | RSE  | ALT |
-                        bindings = <
-                                &kp TAB   &kp Q &kp W &kp E &kp R &kp T   &kp Y &kp U  &kp I     &kp O   &kp P    &kp BSPC
-                                &kp LCTRL &kp A &kp S &kp D &kp F &kp G   &kp H &kp J  &kp K     &kp L   &kp SEMI &kp SQT
-                                &kp LSHFT &kp Z &kp X &kp C &kp V &kp B   &kp N &kp M  &kp COMMA &kp DOT &kp FSLH &kp ESC
-                                                &kp LGUI &mo 1 &kp SPACE   &kp RET &mo 2 &kp RALT
-                        >;
-                sensor-bindings = <
-                        &inc_dec_kp C_VOL_UP C_VOL_DN
-                        &inc_dec_kp PG_UP PG_DN>;
-                };
-
-                lower_layer {
-                                // -----------------------------------------------------------------------------------------
-                                // |  TAB |  1  |  2  |  3  |  4  |  5  |   |  6  |  7  |  8  |  9  |  0  | BKSP |
-                                // | BTCLR| BT1 | BT2 | BT3 | BT4 | BT5 |   | LFT | DWN |  UP | RGT |     |      |
-                                // | SHFT |     |     |     |     |     |   |     |     |     |     |     |      |
-                                //                    | GUI |     | SPC |   | ENT |     | ALT |
-                        bindings = <
-                                &kp TAB    &kp N1       &kp N2       &kp N3       &kp N4       &kp N5         &kp N6   &kp N7   &kp N8 &kp N9    &kp N0 &kp BSPC
-                                &bt BT_CLR &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4   &kp LEFT &kp DOWN &kp UP &kp RIGHT &trans &trans
-                                &kp LSHFT  &trans       &trans       &trans       &trans       &trans         &trans   &trans   &trans &trans    &trans &trans
-                                                                &kp LGUI     &trans       &kp SPACE      &kp RET  &trans   &kp RALT
-                        >;
-                        sensor-bindings = <
-                                &inc_dec_kp C_VOL_UP C_VOL_DN 
-                                &inc_dec_kp PG_UP PG_DN
-                        >;
-                };
-
-                raise_layer {
-                                // -----------------------------------------------------------------------------------------
-                                // |  TAB |  !  |  @  |  #  |  $  |  %  |   |  ^  |  &  |  *  |  (  |  )  | BKSP |
-                                // | CTRL |     |     |     |     |     |   |  -  |  =  |  [  |  ]  |  \  |  `   |
-                                // | SHFT |     |     |     |     |     |   |  _  |  +  |  {  |  }  | "|" |  ~   |
-                                //                    | GUI |     | SPC |   | ENT |     | ALT |
-                        bindings = <
-                                &kp  TAB  &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT   &kp CARET &kp AMPS  &kp KP_MULTIPLY &kp LPAR &kp RPAR &kp BSPC
-                                &kp LCTRL &trans   &trans &trans   &trans   &trans      &kp MINUS &kp EQUAL &kp LBKT        &kp RBKT &kp BSLH &kp GRAVE
-                                &kp LSHFT &trans   &trans &trans   &trans   &trans      &kp UNDER &kp PLUS  &kp LBRC        &kp RBRC &kp PIPE &kp TILDE
-                                                        &kp LGUI &trans   &kp SPACE   &kp RET   &trans    &kp RALT
-                        >;
-                        sensor-bindings = <
-                                &inc_dec_kp C_VOL_UP C_VOL_DN 
-                                &inc_dec_kp PG_UP PG_DN
-                        >;
-                };
+    conditional_layers {
+        compatible = "zmk,conditional-layers";
+        tri_layer {
+            if-layers = <NAV SYM>;
+            then-layer = <ADJ>;
         };
+        win_nav {
+            if-layers = <WIN NAV>;
+            then-layer = <WNAV>;
+        };
+    };
+
+    behaviors {
+        hml: home_row_mod_left {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <150>;
+            bindings = <&kp>, <&kp>;
+            hold-trigger-key-positions = <KEYS_R THUMBS>;
+            hold-trigger-on-release;
+        };
+
+        hmr: home_row_mod_right {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <150>;
+            bindings = <&kp>, <&kp>;
+            hold-trigger-key-positions = <KEYS_L THUMBS>;
+            hold-trigger-on-release;
+        };
+    };
+
+    macros {
+        // macOS app switcher: hold Cmd, tap Tab, keep Cmd held until key release
+        app_swch: app_switch {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <10>;
+            tap-ms = <10>;
+            bindings
+                = <&macro_press &kp LGUI>
+                , <&macro_tap &kp TAB>
+                , <&macro_pause_for_release>
+                , <&macro_release &kp LGUI>
+                ;
+        };
+
+        // Windows app switcher: hold Alt, tap Tab, keep Alt held until key release
+        alt_tab: alt_tab {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <10>;
+            tap-ms = <10>;
+            bindings
+                = <&macro_press &kp LALT>
+                , <&macro_tap &kp TAB>
+                , <&macro_pause_for_release>
+                , <&macro_release &kp LALT>
+                ;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        // macOS base. Home row mods CAGS.
+        base {
+            display-name = "BASE";
+            bindings = <
+                &kp TAB   &kp Q &kp W &kp E &kp R &kp T   &kp Y &kp U  &kp I     &kp O   &kp P    &kp BSPC
+                &kp CAPS  &hml LCTRL A &hml LALT S &hml LGUI D &hml LSHFT F &kp G   &kp H &hmr RSHFT J &hmr RGUI K &hmr RALT L &hmr RCTRL SEMI &kp SQT
+                &kp LSHFT &kp Z &kp X &kp C &kp V &kp B   &kp N &kp M  &kp COMMA &kp DOT &kp FSLH &kp ESC
+                                &app_swch &kp SPACE &mo NAV   &mo SYM &kp RET   &kp RG(SPACE)
+            >;
+            sensor-bindings = <ENCODERS>;
+        };
+
+        // Windows base: latched on/off with ADJ + Z position. Home row mods GACS.
+        win {
+            display-name = "WIN";
+            bindings = <
+                &kp TAB   &kp Q &kp W &kp E &kp R &kp T   &kp Y &kp U  &kp I     &kp O   &kp P    &kp BSPC
+                &kp CAPS  &hml LGUI A &hml LALT S &hml LCTRL D &hml LSHFT F &kp G   &kp H &hmr RSHFT J &hmr RCTRL K &hmr RALT L &hmr RGUI SEMI &kp SQT
+                &kp LSHFT &kp Z &kp X &kp C &kp V &kp B   &kp N &kp M  &kp COMMA &kp DOT &kp FSLH &kp ESC
+                                &alt_tab &kp SPACE &mo NAV   &mo SYM &kp RET   &kp RA(SPACE)
+            >;
+            sensor-bindings = <ENCODERS>;
+        };
+
+        nav {
+            display-name = "NAV";
+            bindings = <
+                &kp TAB       &kp N1          &kp N2   &kp N3   &kp N4    &kp N5         &kp N6        &kp N7   &kp N8   &kp N9 &kp N0    &kp BSPC
+                &kp LA(LSHFT) &kp LCTRL       &kp LALT &kp LGUI &kp LSHFT &kp LG(LEFT)   &kp LG(RIGHT) &kp LEFT &kp DOWN &kp UP &kp RIGHT &trans
+                &kp LSHFT     &studio_unlock  &trans   &trans   &trans    &trans         &trans        &trans   &trans   &trans &trans    &trans
+                                                       &kp LGUI &trans    &trans         &trans        &trans   &kp RALT
+            >;
+            sensor-bindings = <ENCODERS>;
+        };
+
+        // Windows nav overrides: active automatically when WIN + NAV (conditional layer). GACS mods.
+        wnav {
+            display-name = "WNAV";
+            bindings = <
+                &trans        &trans   &trans   &trans    &trans    &trans     &trans  &trans &trans &trans &trans &trans
+                &kp LC(LSHFT) &kp LGUI &kp LALT &kp LCTRL &kp LSHFT &kp HOME   &kp END &trans &trans &trans &trans &trans
+                &trans        &trans   &trans   &trans    &trans    &trans     &trans  &trans &trans &trans &trans &trans
+                                                &trans    &trans    &trans     &trans  &trans &trans
+            >;
+            sensor-bindings = <ENCODERS>;
+        };
+
+        sym {
+            display-name = "SYM";
+            bindings = <
+                &kp TAB   &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT   &kp CARET &kp AMPS  &kp KP_MULTIPLY &kp LPAR &kp RPAR &kp BSPC
+                &trans    &trans   &trans &trans   &trans   &trans      &kp MINUS &kp EQUAL &kp LBKT        &kp RBKT &kp BSLH &kp GRAVE
+                &kp LSHFT &trans   &trans &trans   &trans   &trans      &kp UNDER &kp PLUS  &kp LBRC        &kp RBRC &kp PIPE &kp TILDE
+                                          &kp LGUI &trans   &trans      &trans    &trans    &kp RALT
+            >;
+            sensor-bindings = <ENCODERS>;
+        };
+
+        adj {
+            display-name = "ADJ";
+            bindings = <
+                &kp TAB   &trans   &kp F1 &kp F2  &kp F3  &kp F4     &kp C_MUTE   &kp C_VOL_DN &kp C_VOL_UP &kp C_PP     &kp C_NEXT   &kp BSPC
+                &trans    &trans   &kp F5 &kp F6  &kp F7  &kp F8     &trans       &kp C_BRI_DN &kp C_BRI_UP &trans       &trans       &trans
+                &kp LSHFT &tog WIN &kp F9 &kp F10 &kp F11 &kp F12    &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4 &bt BT_CLR
+                                          &kp LGUI &kp SPACE &mo NAV   &mo SYM   &kp RET &kp RALT
+            >;
+            sensor-bindings = <ENCODERS>;
+        };
+
+        // Spare layers for ZMK Studio
+        extra_1 {
+                status = "reserved";
+        };
+
+        extra_2 {
+                status = "reserved";
+        };
+    };
 };
